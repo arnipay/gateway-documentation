@@ -55,7 +55,15 @@ Puede encontrar o regenerar su ID de cliente y clave privada en su configuració
 
 Todos los endpoints requieren los encabezados de [Autenticación](#autenticación).
 
-### Crear un Enlace de Pago
+### Terminología
+
+- **Enlace de pago** (link payment): El enlace o producto que el cliente paga (ej. “Comprar X”). Identificado por **ID de enlace de pago** (`link_payment_id`). Se usa al crear o consultar enlaces (`/api/v1/payment`) y al filtrar transacciones por enlace.
+- **Transacción** (pago): Un intento de pago o pago completado. Identificado por **ID de transacción** (`id`). Se usa en `GET /api/v1/transactions/{id}` y `POST /api/v1/transactions/{id}/reverse`.  
+  Use el **ID de transacción** en la ruta de esos endpoints—no el ID del enlace de pago.
+
+### Enlaces de Pago
+
+#### Crear un Enlace de Pago
 
 Crea un nuevo enlace de pago asociado a su cuenta de Comercio.
 
@@ -115,9 +123,9 @@ Crea un nuevo enlace de pago asociado a su cuenta de Comercio.
 **Respuestas de Error:**
 - `422 Unprocessable Entity`: Errores de validación en los datos de la solicitud
 
-### Obtener un Enlace de Pago Específico
+#### Obtener un Enlace de Pago Específico
 
-Recupera información detallada sobre un enlace de pago específico.
+Recupera información detallada sobre un enlace de pago específico (por ID de enlace de pago).
 
 **Endpoint:** `GET https://arnipay.com.py/api/v1/payment/{id}`
 
@@ -153,7 +161,7 @@ Recupera información detallada sobre un enlace de pago específico.
 **Respuestas de Error:**
 - `404 Not Found`: Enlace de pago no encontrado
 
-### Obtener Métodos de Pago
+#### Obtener Métodos de Pago
 
 Obtiene una lista de métodos de pago disponibles.
 
@@ -181,26 +189,93 @@ Obtiene una lista de métodos de pago disponibles.
 }
 ```
 
-### Revertir un Pago
+### Transacciones
 
-Inicia un proceso de reversión asíncrono para un pago completado. Esta operación reembolsa el monto de la transacción al método de pago original del cliente y actualiza el estado del pago.
+#### Listar Transacciones
 
-**Endpoint:** `POST https://arnipay.com.py/api/v1/payment/{id}/reverse`
+Obtiene una lista paginada de transacciones (pagos) de su cuenta de Comercio.
+
+**Endpoint:** `GET https://arnipay.com.py/api/v1/transactions`
+
+**Parámetros de consulta (opcionales):**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `link_payment_id` | entero | Filtrar por ID de enlace de pago |
+| `page` | entero | Número de página para paginación (predeterminado: 1) |
+
+**Respuesta Exitosa (200 OK):**
+
+La lista de transacciones está en el array de primer nivel `data`. La información de paginación está en `meta`. No espere una estructura anidada `data.data`.
+
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "id": 1,
+      "link_payment_id": 5,
+      "commerce_id": 1,
+      "amount": 10000,
+      "status": "paid",
+      "payment_method": "tigo",
+      "paymentable_type": "tigo",
+      "paymentable_id": 123,
+      "created_at": "2025-02-03T12:00:00.000000Z",
+      "link_payment": {
+        "id": 5,
+        "title": "Example link"
+      }
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 20,
+    "total": 1
+  }
+}
+```
+
+**Objeto transacción:** Cada ítem incluye al menos: `id`, `link_payment_id`, `commerce_id`, `amount`, `status`, `payment_method` (ej. `"tigo"`, `"personal"`, `"qr"`), `paymentable_type`, `paymentable_id`, `created_at`, y opcionalmente `link_payment`.  
+**Valores de estado:** `created`, `pending`, `paid`, `failed`, `cancelled`, `refunded`, `auto_refunded`, `expired`, `voided`, `pending_refund`, etc.
+
+#### Obtener una Transacción
+
+Recupera información detallada de una transacción (pago) por ID de transacción.
+
+**Endpoint:** `GET https://arnipay.com.py/api/v1/transactions/{id}`
+
+**Parámetros:**
+- `id`: El ID de la transacción (pago) (entero o UUID, según implementación)
+
+**Respuesta Exitosa (200 OK):** Misma estructura que un elemento de la lista anterior, con `link_payment` y `paymentable` completos cuando se incluyan. El campo `payment_method` está siempre presente para clientes de la API.
+
+**Respuestas de Error:**
+- `404 Not Found`: Transacción no encontrada o no perteneciente al comercio
+
+#### Revertir una Transacción
+
+Inicia una reversión (reembolso) asíncrona para una transacción completada. Use el **ID de transacción** en la ruta—no el ID del enlace de pago.
+
+**Endpoint:** `POST https://arnipay.com.py/api/v1/transactions/{id}/reverse`
+
+**Parámetros:**
+- `id`: El ID de la transacción (pago)—no el ID del enlace de pago
 
 **Encabezados:**
 - `Content-Type: application/json`
 - *Se requieren encabezados de autenticación estándar*
 
 **Prerrequisitos:**
-- El pago debe estar en estado `paid` (pagado).
-- El método de pago utilizado debe soportar reversión automática (actualmente soportado: Tigo Money, Personal Pay).
-- Los pagos con QR no soportan reversión automática vía API y requieren intervención manual.
+- Solo se pueden revertir transacciones en estado **paid** (pagado).
+- El método de pago debe soportar reversión automática. Algunos métodos (ej. QR) no la soportan; la API devuelve `supports_reversal: false` en ese caso.
 
 **Parámetros del Cuerpo de la Solicitud:**
 
 | Parámetro | Tipo | Requerido | Descripción |
 |-----------|------|----------|-------------|
-| `reason` | cadena | No | Motivo opcional para la reversión (ej. "Cliente solicitó reembolso"). |
+| `reason` | cadena | No | Motivo de la reversión (ej. "Cliente solicitó reembolso"). Por defecto puede ser "Solicitud vía API" o similar. |
 
 **Respuesta Exitosa (200 OK):**
 
@@ -209,15 +284,50 @@ Inicia un proceso de reversión asíncrono para un pago completado. Esta operaci
   "status": "success",
   "message": "Proceso de reversión iniciado",
   "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "id": 1,
     "status": "processing_refund"
   }
 }
 ```
 
 **Respuestas de Error:**
-- `400 Bad Request`: Si el método de pago no soporta reversión o si el pago no está en un estado válido.
-- `404 Not Found`: Pago no encontrado
+
+- **404 Not Found** – Transacción no encontrada o no perteneciente al comercio:
+
+```json
+{
+  "status": "error",
+  "message": "Payment not found"
+}
+```
+
+- **400 Bad Request** – El método de pago no soporta reversión automática:
+
+```json
+{
+  "status": "error",
+  "message": "Payment method does not support automatic reversal. Please contact support.",
+  "data": {
+    "id": 1,
+    "payment_method": "qr",
+    "supports_reversal": false
+  }
+}
+```
+
+- **400 Bad Request** – La transacción no está en estado pagado:
+
+```json
+{
+  "status": "error",
+  "message": "Payment cannot be reversed. It must be in PAID status.",
+  "data": {
+    "id": 1,
+    "current_status": "failed",
+    "required_status": "paid"
+  }
+}
+```
 
 ## Manejo de Errores
 
@@ -231,7 +341,7 @@ La API devuelve códigos de estado HTTP estándar para indicar éxito o fracaso:
 - `422 Unprocessable Entity`: Errores de validación
 - `500 Internal Server Error`: Error del lado del servidor
 
-Las respuestas de error incluyen un cuerpo JSON con detalles:
+Las respuestas de error incluyen un cuerpo JSON. Los errores de validación usan un objeto `errors`; algunos endpoints (ej. revertir transacción) pueden incluir un objeto `data` con contexto:
 
 ```json
 {
@@ -243,9 +353,11 @@ Las respuestas de error incluyen un cuerpo JSON con detalles:
 }
 ```
 
+Algunos errores también devuelven un objeto `data` (ej. `current_status`, `required_status`, `supports_reversal`).
+
 ## Paginación
 
-Los endpoints de lista pueden implementar paginación en el futuro. La implementación actual devuelve todos los resultados sin paginación.
+El endpoint **Listar Transacciones** (`GET /api/v1/transactions`) devuelve resultados paginados. La lista está en el array de primer nivel `data`; los metadatos de paginación están en `meta` (`current_page`, `last_page`, `per_page`, `total`). Otros endpoints de lista pueden implementar paginación en el futuro.
 
 ## Gestión de Enlaces de Pago
 
