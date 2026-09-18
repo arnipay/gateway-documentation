@@ -73,7 +73,7 @@ If you exceed these limits, you'll receive a `429 Too Many Requests` response.
 
 ## Support
 
-If you have any questions or need assistance integrating with our API, please contact our support team at support@geek-wallet.com 
+If you have any questions or need assistance integrating with our API, please contact our support team at info@arnipay.com.py 
 
 ## SDK
 
