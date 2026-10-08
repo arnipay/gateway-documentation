@@ -52,7 +52,7 @@ Si excede estos límites, recibirá una respuesta `429 Demasiadas Solicitudes`.
 
 ## Soporte
 
-Si tiene alguna pregunta o necesita asistencia para integrarse con nuestra API, por favor contacte a nuestro equipo de soporte en api-support@example.com.
+Si tiene alguna pregunta o necesita asistencia para integrarse con nuestra API, por favor contacte a nuestro equipo de soporte en info@arnipay.com.py.
 
 ## SDK
 
