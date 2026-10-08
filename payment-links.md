@@ -4,6 +4,15 @@
 
 This documentation provides details for using the Payment Links API to create and manage payment links programmatically.
 
+## Environments
+
+| Environment | Base URL |
+|-------------|----------|
+| Production | `https://arnipay.com.py/api/v1/` |
+| Sandbox | `https://sandbox.arnipay.com.py/api/v1/` |
+
+Endpoint examples below use the production host. Sandbox uses the same paths on `https://sandbox.arnipay.com.py`. Checkout links returned by the sandbox API use that host as well (for example `https://sandbox.arnipay.com.py/checkout/{id}`).
+
 ## Authentication
 
 All API requests require signature-based authentication using your Commerce credentials. The following headers must be included with **every** request:
@@ -153,10 +162,17 @@ Retrieves detailed information about a specific payment link (by payment link ID
     "expiration_date": null,
     "created_at": "2025-03-10T09:00:00Z",
     "updated_at": "2025-03-10T09:00:00Z",
-    "is_paid": false
+    "is_paid": false,
+    "status": null
   }
 }
 ```
+
+`is_paid` is true only while a payment on the link is still `paid`. `status` is the latest payment status, or `null` when the link has no payment yet. After a refund, `is_paid` is `false` and `status` is `refunded` or `auto_refunded`. Do not treat `is_paid: false` as “never paid”.
+
+`status` values: `created`, `pending`, `paid`, `failed`, `cancelled`, `refunded`, `auto_refunded`, `expired`, `voided`, `pending_refund`, `pending_void`, `pending_chargeback`, or `null`.
+
+The list endpoint (`GET /api/v1/payment`) includes `is_paid` and `status` on each link as well.
 
 **Error Responses:**
 - `404 Not Found`: Payment link not found
@@ -238,7 +254,7 @@ The list of transactions is in the top-level `data` array. Pagination info is in
 ```
 
 **Transaction object:** Each item includes at least: `id`, `link_payment_id`, `commerce_id`, `amount`, `status`, `payment_method` (e.g. `"tigo"`, `"personal"`, `"qr"`), `paymentable_type`, `paymentable_id`, `created_at`, and optionally `link_payment`.  
-**Status values** include: `created`, `pending`, `paid`, `failed`, `cancelled`, `refunded`, `auto_refunded`, `expired`, `voided`, `pending_refund`, etc.
+**Status values:** `created`, `pending`, `paid`, `failed`, `cancelled`, `refunded`, `auto_refunded`, `expired`, `voided`, `pending_refund`, `pending_void`, `pending_chargeback`. These are payment statuses. Webhook `event` names are separate (`payment.refunded` covers both `refunded` and `auto_refunded`).
 
 #### Get a Single Transaction
 
@@ -375,11 +391,18 @@ The following events trigger webhook notifications:
 
 | Event | Description |
 |-------|-------------|
-| `payment.completed` | A payment has been successfully completed |
-| `payment.failed` | A payment has failed |
-| `payment.pending` | A payment is pending processing |
-| `pending_refund` | Out-of-stock condition detected, refund pending |
-| `auto_refunded` | Funds successfully returned to customer (system-initiated) |
+| `payment.completed` | A payment has been successfully completed. `data.status` is `paid`. |
+| `payment.pending` | A payment was created or is still pending. `data.status` is `created` or `pending`. |
+| `payment.failed` | A payment has failed. `data.status` is `failed`. |
+| `payment.cancelled` | A payment was cancelled. `data.status` is `cancelled`. |
+| `payment.refund_pending` | A refund has started and has not finished. `data.status` is `pending_refund`. This includes an out-of-stock reversal. |
+| `payment.refunded` | Funds were returned. `data.status` is `refunded` (manual) or `auto_refunded` (system). This is not `payment.completed`. |
+| `payment.expired` | A payment expired. `data.status` is `expired`. |
+| `payment.voided` | A payment was voided. `data.status` is `voided`. |
+| `payment.void_pending` | A void has started and has not finished. `data.status` is `pending_void`. |
+| `payment.chargeback_pending` | A chargeback is pending. `data.status` is `pending_chargeback`. |
+
+`payment.completed` is the only event that means the payment is collected. A refund is `payment.refunded` or `payment.refund_pending`, even though an older gateway build sent those updates as `payment.completed`.
 
 ### Webhook Payload Format
 

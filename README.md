@@ -40,11 +40,12 @@ You can find your client ID and private key in your Commerce settings page, or r
 
 ## API Base URL
 
-The base URL for all API endpoints is:
+| Environment | Base URL |
+|-------------|----------|
+| Production | `https://arnipay.com.py/api/v1/` |
+| Sandbox | `https://sandbox.arnipay.com.py/api/v1/` |
 
-```
-https://arnipay.com.py/api/v1/
-```
+Use sandbox credentials against the sandbox host. Paths are the same in both environments. Examples in this documentation use the production host.
 
 ## Webhooks
 

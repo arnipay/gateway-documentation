@@ -20,11 +20,12 @@ Puede encontrar estas credenciales en su página de configuración de Comercio, 
 
 ## URL Base de la API
 
-La URL base para todos los endpoints de la API es:
+| Entorno | URL base |
+|---------|----------|
+| Producción | `https://arnipay.com.py/api/v1/` |
+| Sandbox | `https://sandbox.arnipay.com.py/api/v1/` |
 
-```
-https://arnipay.com.py/api/v1/
-```
+Use credenciales de sandbox contra el host de sandbox. Las rutas son las mismas en ambos entornos. Los ejemplos de esta documentación usan el host de producción.
 
 ## Webhooks
 

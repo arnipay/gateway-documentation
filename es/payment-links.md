@@ -4,6 +4,15 @@
 
 Esta documentación proporciona detalles para utilizar la API de Enlaces de Pago para crear y gestionar enlaces de pago de forma programática.
 
+## Entornos
+
+| Entorno | URL base |
+|---------|----------|
+| Producción | `https://arnipay.com.py/api/v1/` |
+| Sandbox | `https://sandbox.arnipay.com.py/api/v1/` |
+
+Los ejemplos de endpoints usan el host de producción. Sandbox usa las mismas rutas en `https://sandbox.arnipay.com.py`. Los enlaces de checkout que devuelve la API de sandbox usan ese host (por ejemplo `https://sandbox.arnipay.com.py/checkout/{id}`).
+
 ## Autenticación
 
 Todas las solicitudes a la API requieren autenticación basada en firma utilizando sus credenciales de Comercio. Los siguientes encabezados deben incluirse con **cada** solicitud:
@@ -153,10 +162,17 @@ Recupera información detallada sobre un enlace de pago específico (por ID de e
     "expiration_date": null,
     "created_at": "2025-03-10T09:00:00Z",
     "updated_at": "2025-03-10T09:00:00Z",
-    "is_paid": false
+    "is_paid": false,
+    "status": null
   }
 }
 ```
+
+`is_paid` es verdadero solo mientras un pago del enlace sigue en `paid`. `status` es el estado del último pago, o `null` si el enlace todavía no tiene un pago. Después de un reembolso, `is_paid` es `false` y `status` es `refunded` o `auto_refunded`. No interprete `is_paid: false` como “nunca se pagó”.
+
+Valores de `status`: `created`, `pending`, `paid`, `failed`, `cancelled`, `refunded`, `auto_refunded`, `expired`, `voided`, `pending_refund`, `pending_void`, `pending_chargeback`, o `null`.
+
+El listado (`GET /api/v1/payment`) también incluye `is_paid` y `status` en cada enlace.
 
 **Respuestas de Error:**
 - `404 Not Found`: Enlace de pago no encontrado
@@ -238,7 +254,7 @@ La lista de transacciones está en el array de primer nivel `data`. La informaci
 ```
 
 **Objeto transacción:** Cada ítem incluye al menos: `id`, `link_payment_id`, `commerce_id`, `amount`, `status`, `payment_method` (ej. `"tigo"`, `"personal"`, `"qr"`), `paymentable_type`, `paymentable_id`, `created_at`, y opcionalmente `link_payment`.  
-**Valores de estado:** `created`, `pending`, `paid`, `failed`, `cancelled`, `refunded`, `auto_refunded`, `expired`, `voided`, `pending_refund`, etc.
+**Valores de estado:** `created`, `pending`, `paid`, `failed`, `cancelled`, `refunded`, `auto_refunded`, `expired`, `voided`, `pending_refund`, `pending_void`, `pending_chargeback`. Son estados del pago. El nombre del evento de webhook es distinto (`payment.refunded` cubre tanto `refunded` como `auto_refunded`).
 
 #### Obtener una Transacción
 
@@ -365,15 +381,6 @@ El endpoint **Listar Transacciones** (`GET /api/v1/transactions`) devuelve resul
 - Estos enlaces son completamente funcionales pero no se muestran en la interfaz de usuario para evitar desorden.
 - Los pagos para enlaces creados por API serán visibles en el historial de actividad/pago con una insignia de API.
 
-## Estados de Pago
-
-Los pagos pueden tener los siguientes estados:
-
-- `PAID`: Pago completado exitosamente.
-- `REFUNDED`: Reembolso manual iniciado por el comercio.
-- `AUTO_REFUNDED`: Reembolso iniciado por el sistema (ej. problemas de inventario).
-- `PENDING_REFUND`: Reembolso en progreso o requiere atención manual.
-
 ## Notificaciones Webhook
 
 Nuestro sistema puede notificar a su aplicación sobre eventos de pago en tiempo real utilizando notificaciones webhook.
@@ -382,11 +389,18 @@ Nuestro sistema puede notificar a su aplicación sobre eventos de pago en tiempo
 
 | Evento | Descripción |
 |-------|-------------|
-| `payment.completed` | Un pago se ha completado exitosamente |
-| `payment.failed` | Un pago ha fallado |
-| `payment.pending` | Un pago está pendiente de procesamiento |
-| `pending_refund` | Condición de falta de stock detectada, reembolso pendiente |
-| `auto_refunded` | Fondos devueltos exitosamente al cliente (iniciado por el sistema) |
+| `payment.completed` | Un pago se completó. `data.status` es `paid`. |
+| `payment.pending` | Un pago se creó o sigue pendiente. `data.status` es `created` o `pending`. |
+| `payment.failed` | Un pago falló. `data.status` es `failed`. |
+| `payment.cancelled` | Un pago se canceló. `data.status` es `cancelled`. |
+| `payment.refund_pending` | Un reembolso empezó y no terminó. `data.status` es `pending_refund`. Incluye una reversión por falta de stock. |
+| `payment.refunded` | Los fondos se devolvieron. `data.status` es `refunded` (manual) o `auto_refunded` (sistema). No es `payment.completed`. |
+| `payment.expired` | Un pago expiró. `data.status` es `expired`. |
+| `payment.voided` | Un pago se anuló. `data.status` es `voided`. |
+| `payment.void_pending` | Una anulación empezó y no terminó. `data.status` es `pending_void`. |
+| `payment.chargeback_pending` | Un contracargo está pendiente. `data.status` es `pending_chargeback`. |
+
+`payment.completed` es el único evento que significa que el pago está cobrado. Un reembolso es `payment.refunded` o `payment.refund_pending`.
 
 ### Formato de Carga Útil del Webhook
 
