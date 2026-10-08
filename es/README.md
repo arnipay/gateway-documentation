@@ -66,10 +66,10 @@ Una biblioteca JavaScript/TypeScript con soporte completo para TypeScript tanto 
 
 Nuestro SDK de JavaScript está disponible a través de los siguientes canales:
 
-- **GitHub**: [github.com/GEEKWALLETSRL/arnipay-sdk-js](https://github.com/GEEKWALLETSRL/arnipay-sdk-js)
+- **GitHub**: [github.com/arnipay/sdk-js](https://github.com/arnipay/sdk-js)
 - **npm**: Instalar vía npm:
   ```bash
-  npm install @geekwallet/gw-sdk-js
+  npm install gw-sdk
   ```
 
 ### SDK de PHP
@@ -78,8 +78,8 @@ Una biblioteca PHP que proporciona interfaces simples para crear enlaces de pago
 
 Nuestro SDK de PHP está disponible a través de los siguientes canales:
 
-- **GitHub**: [github.com/GEEKWALLETSRL/arnipay-sdk-php](https://github.com/GEEKWALLETSRL/arnipay-sdk-php)
+- **GitHub**: [github.com/arnipay/sdk-php](https://github.com/arnipay/sdk-php)
 - **Composer**: Instalar vía Composer:
   ```bash
-  composer require geekwalletsrl/arnipay-sdk-php
+  composer require arnipay/sdk-php
   ``` 

@@ -88,10 +88,10 @@ A JavaScript/TypeScript library with full TypeScript support for both browser an
 
 Our JavaScript SDK is available through the following channels:
 
-- **GitHub**: [github.com/GEEKWALLETSRL/arnipay-sdk-js](https://github.com/GEEKWALLETSRL/arnipay-sdk-js)
+- **GitHub**: [github.com/arnipay/sdk-js](https://github.com/arnipay/sdk-js)
 - **npm**: Install via npm:
   ```bash
-  npm install @geekwallet/gw-sdk-js
+  npm install gw-sdk
   ```
 
 ### PHP SDK
@@ -100,9 +100,9 @@ A PHP library that provides simple interfaces for creating payment links, fetchi
 
 Our PHP SDK is available through the following channels:
 
-- **GitHub**: [github.com/GEEKWALLETSRL/arnipay-sdk-php](https://github.com/GEEKWALLETSRL/arnipay-sdk-php)
+- **GitHub**: [github.com/arnipay/sdk-php](https://github.com/arnipay/sdk-php)
 - **Composer**: Install via Composer:
   ```bash
-  composer require geekwalletsrl/arnipay-sdk-php
+  composer require arnipay/sdk-php
   ```
 
